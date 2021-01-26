@@ -70,6 +70,8 @@ b = -np.sqrt(1-(a-1)**2) + 1
 
 # plt.axis('equal')
 # plt.plot([4,8,16,32,64,128],[30, 133,570,3173,10029,34936])
+plt.xlabel('n')
 plt.plot([4,8,16,32,64,128],[0.003, 0.0156, 0.08127, 0.79354, 4.638806, 31.26])
+plt.ylabel('Wall Time (s)')
 plt.grid()
 plt.show()

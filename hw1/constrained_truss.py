@@ -3,15 +3,18 @@ from scipy.optimize import minimize
 from scipy.optimize import Bounds
 from math import sin, cos, sqrt, pi
 import truss
+import numpy as np
 
 
 def runoptimization(params, stressmax):
 
     def objcon(x):
         mass, stress = truss.truss(x)
-        f = mass
-        g[0] = 1 - stress/stressmax
-        g[1] = 1 + stress/stressmax
+        f = mass/100
+        g = 1.0 - stress/stressmax
+        g = np.append(g, stress/stressmax + 1)
+        g[8] = 1.0 - stress[8]/75e3
+        g[18] = 1.0 + stress[8] / 75e3
         return f, g
 
     xlast = []
@@ -36,14 +39,24 @@ def runoptimization(params, stressmax):
     constraints = {'type': 'ineq', 'fun': con}
     options = {'disp': True}
 
-    res = minimize(obj, x0, bounds=Bounds(0.1, 1000), constraints=constraints, options=options)
-    print("x = ", res.x)
-    print('f = ', res.fun)
-    print(res.success)
+    res = minimize(obj, x0, bounds=Bounds(0.1, 10), constraints=constraints, options=options)
+    # print("x = ", res.x)
+    # print('f = ', res.fun)
+    # print(res.success)
+    # print(res.message)
+    x_star = res.x
+    return x_star
 
 
 if __name__ == '__main__':
     params = 0
     stressmax = 25e3
 
-    runoptimization(params, stressmax)
+    x_star = runoptimization(params, stressmax)
+
+    mass, stress = truss.truss(x_star)
+
+    print('The optimized diameters are: ', x_star)
+    print('Mass is: ', mass)
+    print('Stress in each member is: ', stress)
+
