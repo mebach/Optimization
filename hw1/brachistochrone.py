@@ -7,7 +7,7 @@ import time
 # design variables
 start = np.array([0.0, 1.0])
 end = np.array([1.0, 0.0])
-n = 12  # number of nodes
+n = 4  # number of nodes
 x = np.linspace(start[0], end[0], n)
 
 # constants
@@ -41,7 +41,8 @@ y_guess = y_guess[1:n-1]
 options = {'eps': 1e-6}
 
 minimize_time = time.time()
-y_star = np.array(minimize(obj, y_guess, options=options).x)
+res = minimize(obj, y_guess, options=options)
+y_star = np.array(res.x)
 minimize_time = time.time() - minimize_time
 y_star = np.insert(y_star, 0, start[1])
 y_star = np.append(y_star, end[1])
@@ -54,14 +55,21 @@ for i in range(n-1):
 
 print('The total travelling time is: ', dt)
 print('The total time to optimize is: ', minimize_time)
-print('The number of function calls is: ', obj_calls)
+
+print(" ")
+print('Number of iterations performed by the optimizer: ', res.nit)
+print('Number of evaluations of the objective function: ', res.nfev)
+print('Reason for termination: ', res.message)
 
 a = np.linspace(0, 1, 100)
 b = -np.sqrt(1-(a-1)**2) + 1
 
-plt.plot(x, y_star)
-plt.xlim(0, 1)
-plt.ylim(0, 1)
-plt.grid()
+# plt.plot(x, y_star)
+# plt.xlim(0, 1)
+# plt.ylim(0, 1)
+
 # plt.axis('equal')
+# plt.plot([4,8,16,32,64,128],[30, 133,570,3173,10029,34936])
+plt.plot([4,8,16,32,64,128],[0.003, 0.0156, 0.08127, 0.79354, 4.638806, 31.26])
+plt.grid()
 plt.show()
