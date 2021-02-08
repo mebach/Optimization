@@ -17,28 +17,29 @@ def optimizer(x, tau, beta):
         return np.array([2*x[0] - beta*x[1], 2*x[1] - beta*x[0]])
 
     def find_step(x, p):
-        a = 1.0
-        while np.linalg.norm(quad(x + a*p, beta)) > np.linalg.norm(quad(x, beta)):
+        a = 0.1
+        while np.linalg.norm(rosen(x + a*p)) > np.linalg.norm(rosen(x)):
             a = a / 2.0
             print('Finding step...')
         return a
 
     i = 0  # to keep track of how many iterations this goes through
-    while np.linalg.norm(quad_grad(x, beta)) > tau:
+    while np.linalg.norm(rosen_grad(x)) > tau:
         print('i = ', i)
-        p = -quad_grad(x, beta)  # find search direction (negative of the gradient)
+        p = -rosen_grad(x)  # find search direction (negative of the gradient)
         print('p = ', p)
         alpha = find_step(x, p)  # determine step length
         print('alpha =', alpha)
         x = x + alpha*p  # x(k+1) = x(k) + alpha(k)*p(k) update design variables
+        print('x = ', x)
         i += 1
 
     return x, i
 
 
 if __name__ == '__main__':
-    x = np.array([2.0, -1.0])
-    tau = 1e-4
+    x = np.array([1.5, 0.0])
+    tau = 1e-6
     beta = 3./2
 
     x, i = optimizer(x, tau, beta)
