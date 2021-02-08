@@ -1,12 +1,10 @@
-import numpy as np
 from scipy.optimize import minimize
 from scipy.optimize import Bounds
-from math import sin, cos, sqrt, pi
 import truss
 import numpy as np
 
 
-def runoptimization(params, stressmax):
+def runoptimization(running_mass, stressmax):
 
     def objcon(x):
         mass, stress = truss.truss(x)
@@ -24,6 +22,8 @@ def runoptimization(params, stressmax):
     def obj(x):
         nonlocal xlast, flast, glast
         if not np.array_equal(x, xlast):
+            file.write(str(flast*100))
+            file.write('\n')
             flast, glast = objcon(x)
             xlast = x
         return flast
@@ -49,6 +49,8 @@ def runoptimization(params, stressmax):
 
 
 if __name__ == '__main__':
+    file = open('mass_file.txt', 'w')
+
     params = 0
     stressmax = 25e3
 
@@ -60,3 +62,7 @@ if __name__ == '__main__':
     print('Mass is: ', mass)
     print('Stress in each member is: ', stress)
 
+    running_mass = []
+    with open('mass_file.txt') as my_file:
+        running_mass = my_file.readlines()
+    print(running_mass)
