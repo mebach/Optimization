@@ -31,6 +31,8 @@ def brachistochrone(yint):
 
     for i in range(n - 1):
         ds = sqrt((x[i + 1] - x[i]) ** 2 + (y[i + 1] - y[i]) ** 2)
+        if h - y[i + 1] - mu * x[i + 1] < 0.0:
+            return 1e6, np.ones(n-2)
         vbar = sqrt(h - y[i + 1] - mu * x[i + 1]) + sqrt(h - y[i] - mu * x[i])
         T += ds / vbar
 
