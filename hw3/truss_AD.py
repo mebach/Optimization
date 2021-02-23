@@ -1,8 +1,9 @@
 import numpy as np
 from math import sin, cos, sqrt, pi
+import algopy
 
 
-def truss(A):
+def truss_AD(A):
     """Computes mass and stress for the 10-bar truss problem
     Parameters
     ----------
@@ -25,7 +26,7 @@ def truss(A):
     start = [5, 3, 6, 4, 4, 2, 5, 6, 3, 4]
     finish = [3, 1, 4, 2, 3, 1, 4, 3, 2, 1]
     phi = np.array([0, 0, 0, 0, 90, 90, -45, 45, -45, 45])*pi/180
-    L = [Ls, Ls, Ls, Ls, Ls, Ls, Ld, Ld, Ld, Ld]
+    L = np.array([Ls, Ls, Ls, Ls, Ls, Ls, Ld, Ld, Ld, Ld])
 
     nbar = len(A)  # number of bars
     E = 1e7*np.ones(nbar)  # modulus of elasticity
@@ -43,17 +44,19 @@ def truss(A):
     mass = np.sum(rho*A*L)
 
     # stiffness and stress matrices
-    K = np.zeros((DOF*n, DOF*n), dtype=complex)
-    S = np.zeros((nbar, DOF*n), dtype=complex)
+    K = algopy.zeros((DOF*n, DOF*n), dtype=A)
+    S = np.zeros((nbar, DOF*n))
 
     for i in range(nbar):  # loop through each bar
 
         # compute submatrix for each element
         Ksub, Ssub = bar(E[i], A[i], L[i], phi[i])
-
         # insert submatrix into global matrix
         idx = node2idx([start[i], finish[i]], DOF)  # pass in the starting and ending node number for this element
-        K[np.ix_(idx, idx)] += Ksub
+        # K[np.ix_(idx, idx)] += Ksub
+        for j in range(4):
+            for k in range(4):
+                K[idx[j], idx[k]] += Ksub[j, k]
         S[i, idx] = Ssub
 
     # applied loads
@@ -69,16 +72,17 @@ def truss(A):
     idx = np.squeeze(np.where(rigid))
     remove = node2idx(idx+1, DOF)  # add 1 b.c. made indexing 1-based for convenience
 
-    K = np.delete(K, remove, axis=0)
-    K = np.delete(K, remove, axis=1)
+    # K = np.delete(K, remove, axis=0)
+    # K = np.delete(K, remove, axis=1)
+    K = K[:8, :8]
     F = np.delete(F, remove, axis=0)
     S = np.delete(S, remove, axis=1)
 
     # solve for deflections
-    d = np.linalg.solve(K, F)
+    d = algopy.solve(K, F)
 
     # compute stress
-    stress = np.dot(S, d).reshape(nbar)
+    stress = algopy.dot(S, d).reshape(nbar)
 
     return mass, stress
 
