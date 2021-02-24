@@ -1,6 +1,5 @@
 import numpy as np
 from truss import truss
-import cmath
 
 
 def complex_step(fun, x, h):
@@ -20,7 +19,8 @@ def complex_step(fun, x, h):
 
 
 if __name__ == '__main__':
-    A = 2* np.ones(10)
+    # A = np.ones(10)
+    A = np.array([1.02608886, 0.45321982, 1.12683251, 1.53518411, 0.1, 0.45321983, 1.18241006, 0.9771986, 1.57490896, 0.45498688])
     Jf, Jg = complex_step(truss, A, 1e-6)
     print('Jf = ', Jf)
     print('Jg = ', Jg)

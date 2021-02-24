@@ -7,31 +7,28 @@ import numpy as np
 
 
 def runoptimization(stressmax):
-
     def objcon(x):
-        # print('Calling objcon... \n')
         def func(x):
             mass, stress = truss(x)
             f = mass / 100
-            g = 1.0 - stress/stressmax
-            g = np.append(g, stress/stressmax + 1)
-            g[8] = 1.0 - stress[8] / 75e3
-            g[18] = 1.0 + stress[8] / 75e3
+            g = (stressmax - stress)/stressmax
+            g = np.append(g, (stress + stressmax)/stressmax)
+            g[8] = (75e3 - stress[8]) / 75e3
+            g[18] = (75e3 + stress[8]) / 75e3
             # print('g = ', g)
             return f, g
         f, g = func(x)
         # df, dg = finite_difference(func, x, 1e-6)
         df, dg = complex_step(func, x, 1e-12)
-        # print('df = ', df)
-        # print('dg = ', dg)
-        # df, dg = AD(func, x)
+        # print('At this point, x = ', x)
+        # print('At this next point, dg = ', dg)
         return f, g, df, dg
 
-    xlast = []
-    flast = []
-    glast = []
-    dflast = []
-    dglast = []
+    xlast = np.array([])
+    flast = np.array([])
+    glast = np.array([])
+    dflast = np.array([])
+    dglast = np.array([])
 
     def obj(x):
         nonlocal xlast, flast, glast, dflast, dglast
@@ -55,12 +52,14 @@ def runoptimization(stressmax):
         if not np.array_equal(x, xlast):
             flast, glast, dflast, dglast = objcon(x)
             xlast = x
+        print('dglast = ', dglast)
         return dglast
+
+    # ----------------------------------------------------
 
     def finite_difference(fun, x, h):
         # print('Calling finite_difference... \n')
         f, g = fun(x)
-        # print(f, g)
         Jf = np.array([])
         Jg = np.zeros((len(g), len(x)))
         for i in range(len(x)):
@@ -69,13 +68,10 @@ def runoptimization(stressmax):
             f_next, g_next = fun(x_next)
             Jf = np.append(Jf, (f_next - f) / h)
             Jg[:, i] = (g_next - g) / h
-            # print(Jg[:, i])
-        # print('Jg = ', Jg)
         return Jf, Jg
 
     def complex_step(fun, x, h):
         f, g = fun(x)
-        # print(f, g)
         Jf = np.array([])
         Jg = np.zeros((len(g), len(x)))
         for i in range(len(x)):
@@ -84,17 +80,13 @@ def runoptimization(stressmax):
             f_next, g_next = fun(x_next)
             Jf = np.append(Jf, f_next.imag / h)
             Jg[:, i] = g_next.imag / h
-            # print(Jg[:, i])
-
         return Jf, Jg
 
     def AD(fun, x):
-        x_dual = algopy.UTPM.init_jacobian(
-            x)  # essentially, this function just converts the input cross sectional areas into algopy's version of dual numbers
+        x_dual = algopy.UTPM.init_jacobian(x)  # essentially, this function just converts the input cross sectional areas into algopy's version of dual numbers
         mass, stress = fun(x_dual)
         Jf = algopy.UTPM.extract_jacobian(mass)
         Jg = algopy.UTPM.extract_jacobian(stress)
-
         return Jf, Jg
 
     # ----------------------------------------------------
