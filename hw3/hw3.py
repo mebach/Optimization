@@ -11,17 +11,15 @@ def runoptimization(stressmax):
         def func(x):
             mass, stress = truss(x)
             f = mass / 100
+            file.write(str(flast * 100))
+            file.write('\n')
             g = (stressmax - stress)/stressmax
             g = np.append(g, (stress + stressmax)/stressmax)
             g[8] = (75e3 - stress[8]) / 75e3
             g[18] = (75e3 + stress[8]) / 75e3
-            # print('g = ', g)
             return f, g
         f, g = func(x)
-        # df, dg = finite_difference(func, x, 1e-6)
         df, dg = complex_step(func, x, 1e-12)
-        # print('At this point, x = ', x)
-        # print('At this next point, dg = ', dg)
         return f, g, df, dg
 
     xlast = np.array([])
@@ -32,7 +30,6 @@ def runoptimization(stressmax):
 
     def obj(x):
         nonlocal xlast, flast, glast, dflast, dglast
-        # print('Calling obj... \n')
         if not np.array_equal(x, xlast):
             flast, glast, dflast, dglast = objcon(x)
             xlast = x
@@ -40,7 +37,6 @@ def runoptimization(stressmax):
 
     def con(x):
         nonlocal xlast, flast, glast, dflast, dglast
-        # print('Calling con... \n')
         if not np.array_equal(x, xlast):
             flast, glast, dflast, dglast = objcon(x)
             xlast = x
@@ -48,17 +44,14 @@ def runoptimization(stressmax):
 
     def jac(x):
         nonlocal xlast, flast, glast, dflast, dglast
-        # print('Calling jac... \n')
         if not np.array_equal(x, xlast):
             flast, glast, dflast, dglast = objcon(x)
             xlast = x
-        print('dglast = ', dglast)
         return dglast
 
     # ----------------------------------------------------
 
     def finite_difference(fun, x, h):
-        # print('Calling finite_difference... \n')
         f, g = fun(x)
         Jf = np.array([])
         Jg = np.zeros((len(g), len(x)))
@@ -91,18 +84,13 @@ def runoptimization(stressmax):
 
     # ----------------------------------------------------
 
-    x0 = np.ones(10)
-    # x0 = np.array([7.89999955, 0.1, 8.09999937, 3.9, 0.1, 0.1, 5.79827561, 5.51543289, 3.67695526, 0.14142136])
-    # constraints = {'type': 'ineq', 'fun': con}
-    lg = -np.inf
-    ug = 0.0
+    x0 = 0.2 * np.ones(10)
+    lg = 0.0
+    ug = np.inf
     constraints = NonlinearConstraint(con, lg, ug, jac=jac)
     options = {'disp': True}
 
-    # print('About to optimize... \n')
     res = minimize(obj, x0, bounds=Bounds(0.1, 10, keep_feasible=True), constraints=constraints, options=options, jac=True, method='slsqp')
-    # print("x = ", res.x)
-    # print('f = ', res.fun)
     print(res.success)
     print(res.message)
     x_star = res.x
@@ -122,3 +110,4 @@ if __name__ == '__main__':
     print('The optimized diameters are: ', x_star)
     print('Mass is: ', mass)
     print('Stress in each member is: ', stress)
+
