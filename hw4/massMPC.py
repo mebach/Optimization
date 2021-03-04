@@ -1,8 +1,7 @@
 import numpy as np
 from scipy.optimize import minimize, Bounds
 from control.matlab import c2d, StateSpace
-
-# minimize sum from n = 1 to H (x_ref - x)
+import matplotlib.pyplot as plt
 
 
 def runoptimization():
@@ -11,7 +10,7 @@ def runoptimization():
     m = 5
     k = 3
     b = 0.5
-    H = 10  # number of points in the horizon
+    H = 30  # number of points in the horizon
 
     # define the state space equations of the form xdot = Ax + Bu
     A = np.array([[0, 1], [-k / m, -b / m]])
@@ -27,23 +26,21 @@ def runoptimization():
 
     # creates an object which contains the discretized version of A, B, C, and D as well as a dt
     discrete = c2d(statespace, Ts, method='zoh', prewarp_frequency=None)
+    objhist = np.ones(H)
 
     def objcon(u, discrete):
-        print('forces are:', u)
         f = 0  # the objective f to minimize is the difference between the reference x and the actual x, summed across each point in the time horizon
         z = 0.0  # initial position of the mass
         zdot = 0.0  # initial velocity of the mass
         zref = 1.0  # the commanded position for the mass
         x = np.array([[z], [zdot]])  # vectorize the state variables
         for i in range(len(u)):
-            f = f + (zref - z)
-            # print(discrete.A)
-            # print(x)
-            # print(discrete.B)
-            # print(u[i])
-            x_next = np.matmul(discrete.A, x) + np.matmul(discrete.B, np.array([u[i]]))
+            objhist[i] = z
+            f = f + abs(zref - z)
+            x_next = np.matmul(discrete.A, x) + np.matmul(discrete.B, np.array([[u[i]]]))
             z = x_next[0]
-        return f
+            x = x_next
+        return f[0, 0]
 
     ulast = []
     flast = []
@@ -67,14 +64,16 @@ def runoptimization():
     constraints = {'type': 'ineq', 'fun': con}
     options = {'disp': True}
 
-    res = minimize(obj, u0, args=discrete, bounds=Bounds(-1.0, 1.0), options=options)
+    res = minimize(obj, u0, args=discrete, bounds=Bounds(-50.0, 50.0), options=options, method='slsqp')
     # print("x = ", res.x)
     # print('f = ', res.fun)
     # print(res.success)
     # print(res.message)
     x_star = res.x
-    return x_star
+    return x_star, objhist
 
 if __name__ == '__main__':
-    x_star = runoptimization()
+    x_star, objhist = runoptimization()
     print('the optimized forces are: ', x_star)
+    plt.plot(objhist)
+    plt.show()
