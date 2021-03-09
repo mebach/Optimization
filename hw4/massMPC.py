@@ -10,7 +10,7 @@ def runoptimization():
     m = 5
     k = 3
     b = 0.5
-    H = 100  # number of points in the horizon
+    H = 10  # number of points in the horizon
 
     # define the state space equations of the form xdot = Ax + Bu
     A = np.array([[0, 1], [-k / m, -b / m]])
@@ -22,7 +22,7 @@ def runoptimization():
     statespace = StateSpace(A, B, C, D)
 
     # The interval of time between each discrete interval
-    Ts = 0.05
+    Ts = 0.2
 
     # creates an object which contains the discretized version of A, B, C, and D as well as a dt
     discrete = c2d(statespace, Ts, method='zoh', prewarp_frequency=None)
