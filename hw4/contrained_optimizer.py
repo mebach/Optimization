@@ -2,13 +2,13 @@ import numpy as np
 from scipy.optimize import minimize, Bounds
 from control.matlab import c2d, StateSpace
 import matplotlib.pyplot as plt
-
+import time
 
 def runOptimization():
     m = 5
     k = 3
     b = 0.5
-    H = 20  # number of points in the horizon
+    H = 10  # number of points in the horizon
 
     # define the state space equations of the form xdot = Ax + Bu
     A = np.array([[0, 1], [-k / m, -b / m]])
@@ -100,13 +100,17 @@ def runOptimization():
 
 
     x0 = np.ones(H)
+    t0 = time.time()
     x = constrained_optimizer(penalty, x0)
-
+    t1 = time.time() - t0
+    print('Elapsed time: ', t1)
     f = obj(x)
     print('x = ', x)
     print('f = ', f)
     t = Ts * np.array(range(H))
     plt.plot(t, objhist)
+    plt.xlabel('Time (s)')
+    plt.ylabel('Position z (m)')
     plt.show()
 
 

@@ -2,7 +2,7 @@ import numpy as np
 from scipy.optimize import minimize, Bounds
 from control.matlab import c2d, StateSpace
 import matplotlib.pyplot as plt
-
+import time
 
 def runoptimization():
 
@@ -66,9 +66,12 @@ def runoptimization():
 
     u0 = 0.5 * np.ones(H)
     constraints = {'type': 'ineq', 'fun': con}
-    options = {'disp': True}
+    options = {'disp': False}
 
+    t0 = time.time()
     res = minimize(obj, u0, args=discrete, bounds=Bounds(-10.0, 10.0), constraints=constraints, options=options, method='slsqp')
+    t1 = time.time() - t0
+    print('Time elapsed:', t1)
     # print("x = ", res.x)
     # print('f = ', res.fun)
     # print(res.success)
@@ -79,5 +82,8 @@ def runoptimization():
 if __name__ == '__main__':
     x_star, objhist = runoptimization()
     print('the optimized forces are: ', x_star)
-    plt.plot(objhist)
+    t = 0.2 * np.array(range(10))
+    plt.plot(t, objhist)
+    plt.xlabel('Time (s)')
+    plt.ylabel('Position z (m)')
     plt.show()
