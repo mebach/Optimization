@@ -1,45 +1,48 @@
 import numpy as np
+from scipy.optimize import minimize, Bounds
 from control.matlab import c2d, StateSpace
 import matplotlib.pyplot as plt
-from scipy.optimize import differential_evolution, Bounds
+import time
 
 def runoptimization():
+
     # define parameters
     mc = 1.0
     mr = 0.25
     g = 9.81
-    Fe = (mc + 2 * mr) * g
+    Fe = (mc + 2*mr)*g
     mu = 0.1
     Jc = 0.0042
     d = 0.3
 
-    H = 7  # number of points in the horizon
+    H = 50  # number of points in the horizon
 
     # define the state space equations of the form xdot = Ax + Bu
     A_long = np.array([[0.0, 1.0], [0.0, 0.0]])
-    B_long = np.array([[0], [1 / (mc + 2 * mr)]])
+    B_long = np.array([[0], [1 / (mc + 2*mr)]])
     C_long = np.array([[1, 0], [0, 1]])
     D_long = np.array([[0], [0]])
 
     A_lat = np.array([[0, 0, 1, 0],
                       [0, 0, 0, 1],
-                      [0, -(Fe) / (mc + 2 * mr), (-mu) / (mc + 2 * mr), 0],
+                      [0, -(Fe)/(mc+2*mr), (-mu)/(mc+2*mr), 0],
                       [0, 0, 0, 0]])
     B_lat = np.array([[0],
                       [0],
                       [0],
-                      [1 / (Jc + 2 * mr * d ** 2)]])
+                      [1/(Jc+2*mr*d**2)]])
     C_lat = np.array([[1, 0, 0, 0],
                       [0, 1, 0, 0]])
     D_lat = np.array([[0],
                       [0]])
+
 
     # convert the continuous state space system to a discrete time system
     statespace_long = StateSpace(A_long, B_long, C_long, D_long)
     statespace_lat = StateSpace(A_lat, B_lat, C_lat, D_lat)
 
     # The interval of time between each discrete interval
-    Ts = 0.2
+    Ts = 0.05
 
     # creates an object which contains the discretized version of A, B, C, and D as well as a dt
     discrete_long = c2d(statespace_long, Ts, method='zoh', prewarp_frequency=None)
@@ -77,7 +80,7 @@ def runoptimization():
         zdot = 0.0
         thetadot = 0.0
 
-        zref = 2.0  # the commanded lateral position for the VTOL
+        zref = 1.0  # the commanded lateral position for the VTOL
         x_lat = np.array([[z], [theta], [zdot], [thetadot]])
         # g = np.array([0])
         for i in range(len(u)):
@@ -127,94 +130,33 @@ def runoptimization():
             ulast_lat = u
         return glast_lat
 
-    def nelder_mead(fun, discrete, x, tau_x, tau_f):
-        # initialize variables
-        n = len(x)
-        simplex = np.zeros((n, n+1))
-        simplex[:, 0] = x
-        s = np.zeros(n)
-        l = 0.0001
-
-        def gradx(simplex0, n):
-            sum = 0
-            for i in range(n):
-                sum += np.linalg.norm(simplex0[:, i] - simplex0[:, n])
-            return sum
-
-        def gradf(fun, simplex0, n):
-            sum = 0
-            for i in range(n):
-                sum += (fun(simplex0[:, i], discrete) - fun(simplex0[:, n], discrete))**2
-            return np.sqrt(sum/(n+1))
-
-        for j in range(n):
-            for i in range(n):
-                if j == i:
-                    s[i] = (l/(n*np.sqrt(2)))*(np.sqrt(n+1)-1) + (1/np.sqrt(2))
-                else:
-                    s[i] = (l/(n*np.sqrt(2)))*(np.sqrt(n+1)-1)
-            simplex[:, j+1] = x + s
-
-        f = np.zeros(n+1)
-        while gradx(simplex, n) > tau_x or gradf(fun, simplex, n) > tau_f:
-            for i in range(n+1):
-                f[i] = fun(simplex[:, i], discrete)
-            simplex = simplex[:, np.argsort(f)]
-            xc = (1/n) * (simplex.sum(axis=1)-simplex[:, -1])
-            xr = xc + (xc - simplex[:, -1])
-            if fun(xr, discrete) < fun(simplex[:, 0], discrete):
-                xe = xc + 2*(xc - simplex[:, -1])
-                if fun(xe, discrete) < fun(simplex[:, 0], discrete):
-                    simplex[:, -1] = xe
-                else:
-                    simplex[:, -1] = xr
-            elif fun(xr, discrete) <= fun(simplex[:, -2], discrete):
-                simplex[:, -1] = xr
-            else:
-                if fun(xr, discrete) > fun(simplex[:, -1], discrete):
-                    xic = xc - 0.5 * (xc - simplex[:, -1])
-                    if fun(xic, discrete) < fun(simplex[:, -1], discrete):
-                        simplex[:, -1] = xic
-                    else:
-                        for i in range(n):
-                            simplex[:, i+1] = simplex[:, 0] + 0.5 * (simplex[:, i+1]-simplex[:, 0])
-                else:
-                    xoc = xc + 0.5 * (xc - simplex[:, -1])
-                    if fun(xoc, discrete) < fun(xr, discrete):
-                        simplex[:, -1] = xoc
-                    else:
-                        for i in range(n):
-                            simplex[:, i+1] = simplex[:, 0] + 0.5 * (simplex[:, i+1] - simplex[:, 0])
-
-        return simplex[:,0]
 
     u0_long = 0.5 * np.ones(H)
     u0_lat = 0.5 * np.ones(H)
     constraints = {'type': 'ineq', 'fun': con_long}
     options = {'disp': False}
 
-    x = nelder_mead(obj_long, discrete_long, u0_long, 1e-6, 1e-8)
-    print('Optimized x: ', x)
-    plt.plot(objhist_h)
-    plt.xlabel('Time (s)')
-    plt.ylabel('Position z (m)')
-
-    lb = -100.0
-    ub = 100.0
-    bounds = Bounds([lb, lb, lb, lb, lb, lb, lb], [ub, ub, ub, ub, ub, ub, ub])
-    res_long = differential_evolution(obj_long, bounds=bounds, args=(discrete_long,), strategy='best1bin', maxiter=1000, popsize=15, tol=0.01, mutation=0.5, recombination=0.7, disp=True, polish=True, init='latinhypercube', atol=0)
-    res_lat = differential_evolution(obj_lat, bounds=bounds, args=(discrete_lat,), strategy='best1bin', maxiter=1000, popsize=15, tol=0.01, mutation=0.5, recombination=0.7, disp=True, polish=True, init='latinhypercube', atol=0)
-    print('Optimized x_gen: ', res_long.x)
-    print('Optimized tau_gen: ', res_lat.x)
-    plt.plot(objhist_h)
-    # plt.plot(objhist_z)
-    plt.xlabel('Time (s)')
-    plt.ylabel('Position (m)')
-    plt.show()
-
+    t0 = time.time()
+    res_f = minimize(obj_long, u0_long, args=discrete_long, bounds=Bounds(-10.0, 10.0), options=options, method='slsqp')
+    res_tau = minimize(obj_lat, u0_lat, args=discrete_lat, bounds=Bounds(-10.0, 10.0), options=options, method='slsqp')
+    t1 = time.time() - t0
+    print('Time elapsed:', t1)
+    # print("x = ", res.x)
+    # print('f = ', res.fun)
+    # print(res.success)
+    # print(res.message)
+    x_long_star = res_f.x
+    x_lat_star = res_tau.x
+    return x_long_star, x_lat_star, objhist_h, objhist_z
 
 
 if __name__ == '__main__':
-    runoptimization()
-
-
+    x_long_star, x_lat_star, objhist_h, objhist_z = runoptimization()
+    print('the optimized forces are: ', x_long_star)
+    print('the optimized torques are: ', x_lat_star)
+    t = 0.05 * np.array(range(50))
+    plt.plot(t, objhist_h)
+    plt.plot(t, objhist_z)
+    plt.xlabel('Time (s)')
+    plt.ylabel('Position h (m)')
+    plt.show()
